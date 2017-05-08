@@ -1,0 +1,34 @@
+作者：科技植 QQ:806329586
+其中错别字请谅解
+想法：
+	给本人的搭载linux(内核版本2.6.37)九鼎S5PV210开发板用上USB-WIFI功能
+
+过程：
+	首先，本人有一个USB-WIFI模块
+	学过驱动的人都知道要让这个模块工作，肯定要有对应的驱动
+	本着先易后难的思路，本人决定，先在搭载Ubuntu16.04的DELL笔记本电脑上成功运行该模块后，再想办法往开发板上移植
+	将模块插入笔记本USB口，在终端输入dmesg命令和lsusb -t命令，总结得到以下有效信息 
+										idVendor=2955
+										idProduct=1001 
+										Manufacturer: MediaTek 
+										driver: MT7601U
+	通过查询知道了这是联发科公司的USB-WIFI模块，并使用了叫做MT7601U的驱动
+	通过make menuconfig查找开发板运行的内核是否包含有这个模块，经过查找，没有发现，于是决定手动移植	
+	本人通过CSDN，下了MT7601U驱动。
+	根据网上的指导(http://www.embedu.org/Column/Column911.htm)，修改了Makefile里的LINUX_SRC = /home/jyn/图片/Linux驱动开发实战/driver/x210kernel/kernel路径与配置了交叉编译环境CROSS_COMPILE = arm-none-linux-gnueabi-	
+	make后，将os/linux/mt7601Usta.ko模块复制到u盘，将u盘插入开发板，通过mount /dev/sda1 /mnt/usb挂载u盘，并将mt7601Usta.ko复制到/root目录下
+	将wifi模块插入开发板，并insmod mt7601Usta.ko，发现模块能正常安装，但并不能识别到wifi模块。经过一番思索，无果，于是又在百度上搜索原因
+	一番查询后，发现如下文章(https://www.huzs.net/?p=2096)，通过阅读并查询驱动源码(common/rtusb_dev_id.c)发现，该驱动默认情况下没有声明支持2955:1001的小度USb-WIFI设备，于是手动添加{USB_DEVICE(0x2955,0x1001)},详细操作见该网址
+	make clean后重新make，并拷贝mt7601Usta.ko到开发板。insmod后，通过ifconfig -a 看到，多了一个ra0的设备，该设备就是我的WIFI模块设备
+	ifconfig ra0 up后，又开始查询如何让该模块去联网，其中遇到好几种说法或者方法，参照了其中两篇博客(http://m.blog.chinaunix.net/uid-28790518-id-5072334.html和http://blog.csdn.net/liangyamin/article/details/7209761)去连接但失败了，查找原因，发现，如下帖子(http://bbs.csdn.net/topics/390212444)作出了一些解释，比如iwconfig过老，不支持WAP加密等，并指出了另外的方法，即使用wpa_passphrase。
+	一开始并没有在意wpa_passphrase，并发现，开发板上一直在打印"RtmpUSBNullFrameKickOut"，处于好奇与怀疑这字符串是否与连接失败有关，百度了这串字符串。
+	点开了百度结果的第一条(http://blog.csdn.net/hktkfly6/article/details/52496933)，发现其中给出了一点解释，但这不是重点，重点是该博客中，博主详细讲述了他移植给360USB-WIFI移植MT7601U驱动的经历。对比他的操作过程，发现与我的经历很相似。继续往后看，看到了他实现用WIFI模块实现AP联网的过程。本人借鉴他的操作经验，照猫画虎，最终成功实现了USB-WIFI模块的联网，并能成功ping通百度，QQ等网站。
+	并写上脚本(wifi.sh)，以便在开发板开机后执行一系列操作bash wifi.sh
+									#!/bin/bash
+									#It operate USB-WIFI
+									insmod mt7601Usta.ko
+									ifconfig ra0 up
+									ifconfig eth0 down
+									udhcpc -i ra0
+	本次操作起始时间 2017.4.19 12:30 到现在 2017.4.19 21:00刚好写完这篇操作经历，可以去吃饭了，LOL。
+	其中心酸自知。留给为以后的人参考	

@@ -1,2 +1,3 @@
 # USB-WIFI
 移植MT7601U的USBWIFI到九鼎X210开发板的经过
+联发科_MT7601U_usbwifi.tar.gz压缩包里的DPO是源码压缩包，DPO文件夹里的Makefile是被改过且成功交叉编译过的，该文件夹里有编译好的.ko模块
